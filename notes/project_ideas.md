@@ -51,3 +51,14 @@ It solves a real-world business problem.
 
 Would you like me to generate a database schema and feature roadmap for the Appointment Booking System to get you started?
 
+
+
+Project goals:
+
+Website -> Create Account -> Generate Unique link
+Other people click on this unique link, they can see your openings & book it (their name, email, time dureation for booking.)
+You can see the bookings.
+
+
+
+Django + JWT: "I understand stateless authentication, security headers, and how to manage user sessions between a separate Frontend and Backend." (Mid/Senior level).
