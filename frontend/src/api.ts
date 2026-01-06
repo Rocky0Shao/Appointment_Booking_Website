@@ -34,3 +34,19 @@ export const deleteTimeBlock = async (id: string) => {
         return false;
     }
 };
+
+// ... existing code ...
+
+export const createTimeBlock = async (slug: string, start: string, end: string) => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/time-blocks/create/`, {
+            slug,
+            start,
+            end
+        });
+        return response.data; // Returns the new block object
+    } catch (error) {
+        console.error("Failed to create block:", error);
+        return null;
+    }
+};
