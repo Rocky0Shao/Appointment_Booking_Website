@@ -54,3 +54,10 @@ def get_host_availability(request,slug):
         })
 
     return Response(data)
+
+
+@api_view(['DELETE'])
+def delete_time_block(request, pk):
+    block = get_object_or_404(TimeBlock, pk=pk)
+    block.delete()
+    return Response({"message": "Deleted successfully"})
