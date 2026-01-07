@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+// Forcing a redeploy to pick up env varss
 // 1. Point to your Django Server
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
