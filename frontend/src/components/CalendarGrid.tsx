@@ -1,74 +1,52 @@
-import { useState } from 'react'; // Import useState
+import { useState } from 'react';
 import { format, addDays, startOfWeek, isSameDay, differenceInMinutes, startOfDay, addMinutes, roundToNearestMinutes } from 'date-fns';
 import { type TimeBlock } from '../api';
 
 interface CalendarGridProps {
   currentDate: Date;
   blocks: TimeBlock[];
-  onDeleteBlock?: (id: string) => void; // Make optional (Guests can't delete)
-  onAddBlock?: (start: Date, end: Date) => void; // Make optional
-  isGuest?: boolean; // <--- NEW PROP
-  onBookSlot?: (start: Date) => void; // <--- NEW ACTION for Guests
+  onDeleteBlock?: (id: string) => void;
+  onAddBlock?: (start: Date, end: Date) => void;
+  isGuest?: boolean;
+  // FIX 1: Update interface to expect start AND end
+  onBookSlot?: (start: Date, end: Date) => void; 
   onSelectBooking?: (booking: TimeBlock) => void;
 }
 
-export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, isGuest, onBookSlot, onSelectBooking }: CalendarGridProps) {  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, isGuest, onBookSlot, onSelectBooking }: CalendarGridProps) {
+  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
   const timeLabels = Array.from({ length: 24 }).map((_, i) => i);
   const PIXELS_PER_HOUR = 64;
 
-  // ==========================================
-  // 1. DRAG STATE
-  // ==========================================
+  // ... (Keep existing dragging state & handlers exactly the same) ...
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Date | null>(null);
   const [dragEnd, setDragEnd] = useState<Date | null>(null);
 
-  // ==========================================
-  // 2. MOUSE EVENT HANDLERS
-  // ==========================================
-  
-  // Helper: Calculate time from mouse Y position
   const getTimeFromClick = (e: React.MouseEvent, dayDate: Date) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const offsetY = e.clientY - rect.top; // How far down inside the column?
-    
-    // Math: Pixels -> Hours -> Minutes
+    const offsetY = e.clientY - rect.top;
     const hours = offsetY / PIXELS_PER_HOUR;
     const minutes = hours * 60;
-    
-    // Add minutes to the start of that day (Midnight)
     const baseTime = startOfDay(dayDate);
     const exactTime = addMinutes(baseTime, minutes);
-
-    // Snap to nearest 30 minutes
     return roundToNearestMinutes(exactTime, { nearestTo: 30 });
   };
 
   const handleMouseDown = (e: React.MouseEvent, day: Date) => {
-
-    // 🛑 STOP if we are a Guest (Guests just click, they don't drag)
     if (isGuest) return;
-
-    // Only left click triggers drag
-    if (e.button !== 0) return; 
-    
-    e.preventDefault(); // Stop text selection
+    if (e.button !== 0) return;
+    e.preventDefault();
     const time = getTimeFromClick(e, day);
-    
     setIsDragging(true);
     setDragStart(time);
-    setDragEnd(addMinutes(time, 30)); // Default min length 30 mins
+    setDragEnd(addMinutes(time, 30));
   };
 
   const handleMouseEnter = (e: React.MouseEvent, day: Date) => {
-    // If we are dragging, update the end time as we move over slots
     if (!isDragging || !dragStart) return;
-
-    // Optional: You could make this smoother by using MouseMove instead of Enter
     const time = getTimeFromClick(e, day);
-    
-    // We only care if we are on the same day for this V1 implementation
     if (isSameDay(time, dragStart)) {
         setDragEnd(time);
     }
@@ -76,40 +54,24 @@ export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, i
 
   const handleMouseUp = () => {
     if (isDragging && dragStart && dragEnd) {
-        // Normalize: Ensure Start is before End
         let start = dragStart;
         let end = dragEnd;
-      // If start equals end, the user probably clicked without dragging.
-        // We can either ignore it OR force it to be 30 mins.
         if (start.getTime() === end.getTime()) {
-           // Option A: Do nothing (cancel action)
-           // return; 
-           
-           // Option B: Force it to be a 30-min block (Better UX)
            end = addMinutes(start, 30);
         }
-
-        // Send to parent
         onAddBlock?.(start, end);
     }
-    // Reset
     setIsDragging(false);
     setDragStart(null);
     setDragEnd(null);
   };
 
-  // ==========================================
-  // 3. RENDER HELPERS
-  // ==========================================
-
   const getPositionStyles = (start: string | Date, end: string | Date) => {
     const startTime = new Date(start);
     const endTime = new Date(end);
     const dayStart = startOfDay(startTime);
-
     const startMinutes = differenceInMinutes(startTime, dayStart);
     const durationMinutes = differenceInMinutes(endTime, startTime);
-
     return {
       top: `${(startMinutes / 60) * PIXELS_PER_HOUR}px`,
       height: `${(durationMinutes / 60) * PIXELS_PER_HOUR}px`,
@@ -117,11 +79,10 @@ export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, i
   };
 
   return (
-    // Add Global MouseUp here to catch releasing mouse outside the column
     <div className="flex flex-col h-[600px] border border-gray-200 rounded-lg bg-white overflow-hidden shadow-sm select-none"
          onMouseUp={handleMouseUp} 
     >
-      {/* HEADER ... (No changes) ... */}
+      {/* ... (Header code remains the same) ... */}
       <div className="grid grid-cols-[60px_1fr] border-b border-gray-200 bg-gray-50 flex-none">
         <div className="p-3 text-xs text-gray-400 border-r border-gray-200 text-center">GMT-5</div>
         <div className="grid grid-cols-7 divide-x divide-gray-200">
@@ -138,8 +99,7 @@ export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, i
 
       <div className="flex-auto overflow-y-auto relative">
         <div className="grid grid-cols-[60px_1fr] min-h-[1536px]">
-          
-          {/* TIME LABELS ... (No changes) ... */}
+          {/* ... (Time Labels remain the same) ... */}
           <div className="border-r border-gray-200 bg-gray-50/30 text-xs text-gray-400">
             {timeLabels.map((hour) => (
               <div key={hour} className="h-16 border-b border-gray-100 relative">
@@ -150,12 +110,10 @@ export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, i
             ))}
           </div>
 
-          {/* MAIN GRID */}
           <div className="grid grid-cols-7 divide-x divide-gray-200 relative">
-             {/* Background Lines */}
-            <div className="absolute inset-0 grid grid-rows-[repeat(24,minmax(0,1fr))] divide-y divide-gray-100 z-0 pointer-events-none">
-               {timeLabels.map(t => <div key={t} className="h-16"></div>)} 
-            </div>
+             <div className="absolute inset-0 grid grid-rows-[repeat(24,minmax(0,1fr))] divide-y divide-gray-100 z-0 pointer-events-none">
+                {timeLabels.map(t => <div key={t} className="h-16"></div>)} 
+             </div>
 
             {weekDays.map((day) => {
                const dayBlocks = blocks.filter(b => isSameDay(new Date(b.start), day));
@@ -164,42 +122,31 @@ export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, i
               <div 
                 key={day.toString()} 
                 className={`relative h-full border-r border-gray-100 ${isGuest ? 'cursor-default' : 'cursor-crosshair hover:bg-gray-50'}`}
-                
-                // 1. Mouse Down (Start Drag)
                 onMouseDown={(e) => handleMouseDown(e, day)}
-                
-                // 2. Mouse Move (Update Drag) <--- THIS WAS MISSING
                 onMouseMove={(e) => handleMouseEnter(e, day)}
                 
-                // 3. Click (Guest Booking)
+                // FIX 2: Calculate end time and pass 2 args to onBookSlot
                 onClick={(e) => {
                     if (isGuest && onBookSlot) {
-                        const time = getTimeFromClick(e, day);
-                        onBookSlot(time);
+                        const start = getTimeFromClick(e, day);
+                        const end = addMinutes(start, 30); // Default 30 min booking
+                        onBookSlot(start, end);
                     }
                 }}
               >
-                {/* -------------------------------------- */}
-                {/* LAYER A: Render Existing Time Blocks   */}
-                {/* -------------------------------------- */}
+                {/* ... (Block rendering remains the same) ... */}
                 {dayBlocks.map((block) => (
                   <div
                     key={block.id}
                     onClick={(e) => {
                         e.stopPropagation();
-                        
-                        // LOGIC CHANGE:
                         if (block.type === 'booking' && onSelectBooking) {
-                            // If it's a booking, tell the parent to open the modal
                             onSelectBooking(block);
                         } else if (!isGuest && onDeleteBlock) {
-                            // If it's a red block, just delete it
                             if (confirm('Delete this blocked time?')) onDeleteBlock(block.id);
                         }
                       }}
-                    // Stop drag from starting on top of an existing block
                     onMouseDown={(e) => e.stopPropagation()} 
-                    
                     className={`absolute left-1 right-1 rounded px-2 py-1 text-xs border-l-4 overflow-hidden z-10 shadow-sm
                       ${isGuest ? 'cursor-default' : 'cursor-pointer'} 
                       ${block.type === 'blocked' 
@@ -215,22 +162,18 @@ export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, i
                   </div>
                 ))}
 
-                {/* -------------------------------------- */}
-                {/* LAYER B: Render The Blue Drag Preview  */}
-                {/* -------------------------------------- */}
                 {isDragging && dragStart && dragEnd && isSameDay(day, dragStart) && (
                   <div 
                     className="absolute left-1 right-1 rounded bg-blue-500/30 border-2 border-blue-600 z-20 pointer-events-none"
                     style={getPositionStyles(dragStart, dragEnd)}
                   >
-                    {/* Optional: Show time duration while dragging */}
                     <div className="text-xs font-bold text-blue-800 p-1">
                         {format(dragStart, 'h:mm')} - {format(dragEnd, 'h:mm')}
                     </div>
                   </div>
                 )}
               </div>
-);
+            );
             })}
           </div>
         </div>

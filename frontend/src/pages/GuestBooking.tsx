@@ -37,9 +37,9 @@ export function GuestBooking() {
   }
   const handleNextWeek = () => setCurrentDate(prev => addWeeks(prev, 1));
   const handlePrevWeek = () => setCurrentDate(prev => subWeeks(prev, 1));
-  const handleToday = () => setCurrentDate(new Date('2026-01-06T09:00:00'));
-  const handleBookSlot = (start: Date) => {
-      setSelectedSlot(start); // Opens the modal
+const handleBookSlot = (start: Date, end: Date) => {
+      setSelectedSlot(start);
+      setEndTime(end); // <--- THIS WAS MISSING OR UNUSED
   };
 
   const submitBooking = async (e: React.FormEvent) => {
