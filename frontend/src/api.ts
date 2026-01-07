@@ -3,12 +3,17 @@ import axios from 'axios';
 // 1. Point to your Django Server
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
+// frontend/src/api.ts
+
 export interface TimeBlock {
     id: string;
-    start: string; // ISO String from Django
+    start: string;
     end: string;
     title: string;
     type: 'booking' | 'blocked';
+    // Add optional fields (because Red blocks won't have them)
+    guest_name?: string;  
+    guest_email?: string; 
 }
 
 // 2. The Fetch Function

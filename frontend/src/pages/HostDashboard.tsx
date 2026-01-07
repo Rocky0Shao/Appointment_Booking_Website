@@ -1,71 +1,111 @@
 import { useEffect, useState } from 'react';
-import { getAvailability,createTimeBlock, type TimeBlock , deleteTimeBlock} from '../api';
+import { addWeeks, subWeeks, startOfWeek, endOfWeek, format } from 'date-fns';
+import { getAvailability, createTimeBlock, type TimeBlock, deleteTimeBlock } from '../api';
 import { CalendarGrid } from '../components/CalendarGrid';
+import { BookingModal } from '../components/BookingModal';
+
+
 
 export function HostDashboard() {
   const [data, setData] = useState<TimeBlock[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Settings
-  const HOST_SLUG = "test-host"; 
+  const HOST_SLUG = "test-host";
+
   // Important: We need a "Current Date" to know which week to show.
   // Since your test data is in 2026, let's pretend today is 2026!
-  const [currentDate, setCurrentDate] = useState(new Date('2026-01-06T09:00:00')); 
-
+  const [currentDate, setCurrentDate] = useState(new Date('2026-01-06T09:00:00'));
+  const [selectedBooking, setSelectedBooking] = useState<TimeBlock | null>(null);
+  
   useEffect(() => {
-    // Fetch a wide range around our fake "current date"
-    const start = "2026-01-01";
-    const end = "2026-02-01";
+      setLoading(true);
+      
+      // Calculate the start/end of the CURRENT week view
+      const start = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
+      const end = endOfWeek(currentDate, { weekStartsOn: 1 });     // Sunday
 
-    getAvailability(HOST_SLUG, start, end)
-      .then((blocks) => {
-        setData(blocks);
-        setLoading(false);
-      });
-  }, []);
+      getAvailability(HOST_SLUG, start.toISOString(), end.toISOString())
+        .then((blocks) => {
+          setData(blocks);
+          setLoading(false);
+        });
+    }, [currentDate]); // <--- Re-run whenever currentDate changes!
+  const handleNextWeek = () => setCurrentDate(prev => addWeeks(prev, 1));
+  const handlePrevWeek = () => setCurrentDate(prev => subWeeks(prev, 1));
+  const handleToday = () => setCurrentDate(new Date('2026-01-06T09:00:00')); // Reset to test date
+  const handleCancelBooking = async (id: string) => {
+    await deleteTimeBlock(id); // We can reuse the delete API!
+    setData(prev => prev.filter(b => b.id !== id));
+    setSelectedBooking(null); // Close modal
+  };
 
   const handleDelete = async (id: string) => {
-      const success = await deleteTimeBlock(id);
-      if (success) {
-        // Optimistic UI update: Remove it from the screen immediately
-        setData(prev => prev.filter(b => b.id !== id));
-      } else {
-        alert("Failed to delete block");
-      }
-    };
-  
+    const success = await deleteTimeBlock(id);
+    if (success) {
+      // Optimistic UI update: Remove it from the screen immediately
+      setData(prev => prev.filter(b => b.id !== id));
+    } else {
+      alert("Failed to delete block");
+    }
+  };
+
   const handleAddBlock = async (start: Date, end: Date) => {
     // 1. Call API
     const newBlock = await createTimeBlock(HOST_SLUG, start.toISOString(), end.toISOString());
-    
+
     if (newBlock) {
-        // 2. Update UI instantly
-        setData(prev => [...prev, newBlock]);
+      // 2. Update UI instantly
+      setData(prev => [...prev, newBlock]);
     } else {
-        alert("Failed to create block");
+      alert("Failed to create block");
     }
   };
-  return (
+
+return (
     <div className="p-8 bg-gray-100 min-h-screen">
       <div className="max-w-6xl mx-auto">
+        
+        {/* === NEW HEADER WITH NAVIGATION === */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">Host Availability</h1>
-          <div className="text-sm text-gray-500">
-            Viewing week of {currentDate.toDateString()}
+          <h1 className="text-3xl font-bold text-gray-800">Host Dashboard</h1>
+          
+          <div className="flex items-center gap-4 bg-white p-2 rounded shadow-sm border border-gray-200">
+             <button onClick={handlePrevWeek} className="px-3 py-1 hover:bg-gray-100 rounded text-gray-600">
+               ← Prev
+             </button>
+             <span className="font-semibold w-32 text-center">
+               {format(currentDate, 'MMMM yyyy')}
+             </span>
+             <button onClick={handleNextWeek} className="px-3 py-1 hover:bg-gray-100 rounded text-gray-600">
+               Next →
+             </button>
+             <button onClick={handleToday} className="ml-2 text-xs text-blue-600 hover:underline">
+               Reset
+             </button>
           </div>
         </div>
         
         {loading ? (
-          <div className="text-center py-20 text-gray-500">Loading calendar...</div>
+          <div className="text-center py-20 text-gray-500">Loading schedule...</div>
         ) : (
-      <CalendarGrid 
-          currentDate={currentDate} 
-          blocks={data} 
-          onDeleteBlock={handleDelete}
-          onAddBlock={handleAddBlock} // <--- Pass the handler
-      />
+          <CalendarGrid 
+             currentDate={currentDate} 
+             blocks={data} 
+             onDeleteBlock={handleDelete}
+             onAddBlock={handleAddBlock}
+             onSelectBooking={(b) => setSelectedBooking(b)}
+          />
         )}
       </div>
+
+       {selectedBooking && (
+          <BookingModal 
+             booking={selectedBooking} 
+             onClose={() => setSelectedBooking(null)}
+             onCancelBooking={handleCancelBooking}
+          />
+       )}
     </div>
   );
 }

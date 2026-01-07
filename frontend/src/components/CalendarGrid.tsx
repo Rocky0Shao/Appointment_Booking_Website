@@ -9,9 +9,10 @@ interface CalendarGridProps {
   onAddBlock?: (start: Date, end: Date) => void; // Make optional
   isGuest?: boolean; // <--- NEW PROP
   onBookSlot?: (start: Date) => void; // <--- NEW ACTION for Guests
+  onSelectBooking?: (booking: TimeBlock) => void;
 }
 
-export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, isGuest, onBookSlot }: CalendarGridProps) {  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, isGuest, onBookSlot, onSelectBooking }: CalendarGridProps) {  const startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
   const timeLabels = Array.from({ length: 24 }).map((_, i) => i);
   const PIXELS_PER_HOUR = 64;
@@ -185,11 +186,17 @@ export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, i
                   <div
                     key={block.id}
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent triggering parent click
-                      if (!isGuest && onDeleteBlock) { 
-                        if (confirm('Delete this block?')) onDeleteBlock(block.id);
-                      }
-                    }}
+                        e.stopPropagation();
+                        
+                        // LOGIC CHANGE:
+                        if (block.type === 'booking' && onSelectBooking) {
+                            // If it's a booking, tell the parent to open the modal
+                            onSelectBooking(block);
+                        } else if (!isGuest && onDeleteBlock) {
+                            // If it's a red block, just delete it
+                            if (confirm('Delete this blocked time?')) onDeleteBlock(block.id);
+                        }
+                      }}
                     // Stop drag from starting on top of an existing block
                     onMouseDown={(e) => e.stopPropagation()} 
                     
