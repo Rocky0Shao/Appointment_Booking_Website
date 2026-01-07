@@ -159,61 +159,71 @@ export function CalendarGrid({ currentDate, blocks, onDeleteBlock, onAddBlock, i
             {weekDays.map((day) => {
                const dayBlocks = blocks.filter(b => isSameDay(new Date(b.start), day));
                
-               return (
-                <div 
-                    key={day.toString()} 
-                    className="relative h-full hover:bg-gray-50 transition-colors cursor-crosshair"
-                    
-                    // 1. Keep Mouse Down (Host Only)
-                    onMouseDown={(e) => handleMouseDown(e, day)}
-                    
-                    // 2. Add Click (Guest Only)
+            return (
+              <div 
+                key={day.toString()} 
+                className={`relative h-full border-r border-gray-100 ${isGuest ? 'cursor-default' : 'cursor-crosshair hover:bg-gray-50'}`}
+                
+                // 1. Mouse Down (Start Drag)
+                onMouseDown={(e) => handleMouseDown(e, day)}
+                
+                // 2. Mouse Move (Update Drag) <--- THIS WAS MISSING
+                onMouseMove={(e) => handleMouseEnter(e, day)}
+                
+                // 3. Click (Guest Booking)
+                onClick={(e) => {
+                    if (isGuest && onBookSlot) {
+                        const time = getTimeFromClick(e, day);
+                        onBookSlot(time);
+                    }
+                }}
+              >
+                {/* -------------------------------------- */}
+                {/* LAYER A: Render Existing Time Blocks   */}
+                {/* -------------------------------------- */}
+                {dayBlocks.map((block) => (
+                  <div
+                    key={block.id}
                     onClick={(e) => {
-                        if (isGuest && onBookSlot) {
-                            const time = getTimeFromClick(e, day);
-                            onBookSlot(time);
-                        }
+                      e.stopPropagation(); // Prevent triggering parent click
+                      if (!isGuest && onDeleteBlock) { 
+                        if (confirm('Delete this block?')) onDeleteBlock(block.id);
+                      }
                     }}
+                    // Stop drag from starting on top of an existing block
+                    onMouseDown={(e) => e.stopPropagation()} 
                     
-                >
-                  {/* 1. Render Existing Blocks */}
-                  {dayBlocks.map((block) => (
-                    <div
-                      key={block.id}
-                        // Disable clicks for guests (No deleting!)
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!isGuest && onDeleteBlock) { // <--- Check isGuest
-                              if (confirm('Delete this block?')) onDeleteBlock(block.id);
-                          }
-                        }}
-                        // Update classes for colors
-                        className={`absolute left-1 right-1 rounded px-2 py-1 text-xs border-l-4 overflow-hidden z-10
-                          ${isGuest ? 'cursor-default' : 'cursor-pointer'} 
-                          ${block.type === 'blocked' 
-                            ? isGuest 
-                              ? 'bg-gray-100 border-gray-400 text-gray-500' // Guest sees Gray
-                              : 'bg-red-100 border-red-500 text-red-700'   // Host sees Red
-                            : 'bg-blue-100 border-blue-500 text-blue-700'}` // Bookings stay Blue
-                        }
-                      style={getPositionStyles(block.start, block.end)}
-                    >
-                      <div className="font-semibold">{block.title}</div>
-                      <div>{format(new Date(block.start), 'h:mm a')}</div>
+                    className={`absolute left-1 right-1 rounded px-2 py-1 text-xs border-l-4 overflow-hidden z-10 shadow-sm
+                      ${isGuest ? 'cursor-default' : 'cursor-pointer'} 
+                      ${block.type === 'blocked' 
+                        ? isGuest 
+                          ? 'bg-gray-100 border-gray-400 text-gray-500' 
+                          : 'bg-red-100 border-red-500 text-red-700' 
+                        : 'bg-blue-100 border-blue-500 text-blue-700'}` 
+                    }
+                    style={getPositionStyles(block.start, block.end)}
+                  >
+                    <div className="font-semibold">{block.title}</div>
+                    <div>{format(new Date(block.start), 'h:mm a')}</div>
+                  </div>
+                ))}
+
+                {/* -------------------------------------- */}
+                {/* LAYER B: Render The Blue Drag Preview  */}
+                {/* -------------------------------------- */}
+                {isDragging && dragStart && dragEnd && isSameDay(day, dragStart) && (
+                  <div 
+                    className="absolute left-1 right-1 rounded bg-blue-500/30 border-2 border-blue-600 z-20 pointer-events-none"
+                    style={getPositionStyles(dragStart, dragEnd)}
+                  >
+                    {/* Optional: Show time duration while dragging */}
+                    <div className="text-xs font-bold text-blue-800 p-1">
+                        {format(dragStart, 'h:mm')} - {format(dragEnd, 'h:mm')}
                     </div>
-                  ))}
-
-                  {/* 2. Render "Phantom" Drag Selection (The visual preview) */}
-                  {isDragging && dragStart && dragEnd && isSameDay(day, dragStart) && (
-                     <div 
-                        className="absolute left-1 right-1 rounded bg-blue-400/30 border-2 border-blue-500 z-20 pointer-events-none"
-                        style={getPositionStyles(dragStart, dragEnd)}
-                     >
-                     </div>
-                  )}
-
-                </div>
-              );
+                  </div>
+                )}
+              </div>
+);
             })}
           </div>
         </div>

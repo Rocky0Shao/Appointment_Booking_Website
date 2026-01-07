@@ -50,3 +50,21 @@ export const createTimeBlock = async (slug: string, start: string, end: string) 
         return null;
     }
 };
+
+// frontend/src/api.ts
+
+export const createBooking = async (slug: string, start: string, end: string, name: string, email: string) => {
+    try {
+        await axios.post(`${API_BASE_URL}/bookings/create/`, {
+            slug,
+            start,
+            end,
+            name,
+            email
+        });
+        return true;
+    } catch (error) {
+        console.error("Booking failed:", error);
+        return false;
+    }
+};
