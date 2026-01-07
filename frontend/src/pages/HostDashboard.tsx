@@ -3,12 +3,13 @@ import { addWeeks, subWeeks, startOfWeek, endOfWeek, format } from 'date-fns';
 import { getAvailability, createTimeBlock, type TimeBlock, deleteTimeBlock } from '../api';
 import { CalendarGrid } from '../components/CalendarGrid';
 import { BookingModal } from '../components/BookingModal';
-
+import { useNavigate } from 'react-router-dom'; // <--- Import this
 
 
 export function HostDashboard() {
   const [data, setData] = useState<TimeBlock[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   // Settings
   const HOST_SLUG = "test-host";
@@ -31,6 +32,14 @@ export function HostDashboard() {
           setLoading(false);
         });
     }, [currentDate]); // <--- Re-run whenever currentDate changes!
+
+  useEffect(() => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+      }
+    }, [navigate]);
+    
   const handleNextWeek = () => setCurrentDate(prev => addWeeks(prev, 1));
   const handlePrevWeek = () => setCurrentDate(prev => subWeeks(prev, 1));
   const handleToday = () => setCurrentDate(new Date('2026-01-06T09:00:00')); // Reset to test date
