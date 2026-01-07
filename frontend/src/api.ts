@@ -3,7 +3,10 @@ import axios from 'axios';
 // 1. Point to your Django Server
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
-// frontend/src/api.ts
+const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: `Token ${token}` } : {};
+};
 
 export interface TimeBlock {
     id: string;
@@ -15,7 +18,20 @@ export interface TimeBlock {
     guest_name?: string;  
     guest_email?: string; 
 }
-
+export const loginUser = async (username: string, password: string) => {
+    try {
+        const response = await axios.post(`${API_BASE_URL}/login/`, { username, password });
+        // Save the token to the browser's permanent storage
+        if (response.data.token) {
+            localStorage.setItem('token', response.data.token);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error("Login failed:", error);
+        return false;
+    }
+};
 // 2. The Fetch Function
 export const getAvailability = async (slug: string, start: string, end: string) => {
     try {
@@ -32,7 +48,9 @@ export const getAvailability = async (slug: string, start: string, end: string) 
 
 export const deleteTimeBlock = async (id: string) => {
     try {
-        await axios.delete(`${API_BASE_URL}/time-blocks/${id}/`);
+        await axios.delete(`${API_BASE_URL}/time-blocks/${id}/`, {
+            headers: getAuthHeaders() // <--- Attach the Key Card!
+        });
         return true;
     } catch (error) {
         console.error("Failed to delete block:", error);
@@ -48,8 +66,10 @@ export const createTimeBlock = async (slug: string, start: string, end: string) 
             slug,
             start,
             end
+        }, {
+            headers: getAuthHeaders() // <--- Attach the Key Card!
         });
-        return response.data; // Returns the new block object
+        return response.data;
     } catch (error) {
         console.error("Failed to create block:", error);
         return null;

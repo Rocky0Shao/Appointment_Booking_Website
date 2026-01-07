@@ -1,4 +1,5 @@
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import HostUser, Booking, TimeBlock
@@ -59,6 +60,7 @@ def get_host_availability(request,slug):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def delete_time_block(request, pk):
     block = get_object_or_404(TimeBlock, pk=pk)
     block.delete()
@@ -67,6 +69,7 @@ def delete_time_block(request, pk):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def create_time_block(request):
     slug = request.data.get('slug')
     start_time = request.data.get('start')
