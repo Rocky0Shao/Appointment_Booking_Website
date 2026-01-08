@@ -5,6 +5,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import HostUser, Booking, TimeBlock
+from .serializers import CustomAuthTokenSerializer
 
 
 #sends all busy blocks of host to frontend 
@@ -160,6 +161,8 @@ def create_booking(request):
 
 
 class CustomLoginView(ObtainAuthToken):
+    serializer_class = CustomAuthTokenSerializer
+    
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data,
                                            context={'request': request})
@@ -170,5 +173,5 @@ class CustomLoginView(ObtainAuthToken):
             'token': token.key,
             'user_id': user.pk,
             'email': user.email,
-            'slug': user.booking_link  # <--- THIS IS THE MAGIC KEY
+            'slug': user.booking_slug  # <--- Fixed: use booking_slug instead of booking_link
         })
