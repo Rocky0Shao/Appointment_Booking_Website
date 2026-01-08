@@ -22,9 +22,14 @@ export interface TimeBlock {
 export const loginUser = async (username: string, password: string) => {
     try {
         const response = await axios.post(`${API_BASE_URL}/login/`, { username, password });
-        // Save the token to the browser's permanent storage
+        
         if (response.data.token) {
             localStorage.setItem('token', response.data.token);
+            
+            // 🟢 NEW: Save the slug too!
+            // If slug is missing (null), save an empty string to avoid crashes
+            localStorage.setItem('slug', response.data.slug || ''); 
+            
             return true;
         }
         return false;
