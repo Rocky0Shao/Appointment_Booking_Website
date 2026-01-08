@@ -12,7 +12,6 @@ export function HostDashboard() {
   const navigate = useNavigate();
 
   // Settings
-  const HOST_SLUG = "test-host";
 
   // Important: We need a "Current Date" to know which week to show.
   // Since your test data is in 2026, let's pretend today is 2026!
@@ -20,25 +19,21 @@ export function HostDashboard() {
   const [selectedBooking, setSelectedBooking] = useState<TimeBlock | null>(null);
   
   useEffect(() => {
-      setLoading(true);
-      
-      // Calculate the start/end of the CURRENT week view
-      const start = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
-      const end = endOfWeek(currentDate, { weekStartsOn: 1 });     // Sunday
+        setLoading(true);
+        
+        const mySlug = localStorage.getItem('slug'); // <--- Get real slug
+        if (!mySlug) return; // Wait until we have a slug
 
-      getAvailability(HOST_SLUG, start.toISOString(), end.toISOString())
-        .then((blocks) => {
-          setData(blocks);
-          setLoading(false);
-        });
-    }, [currentDate]); // <--- Re-run whenever currentDate changes!
+        const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const end = endOfWeek(currentDate, { weekStartsOn: 1 });
 
-  useEffect(() => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-      }
-    }, [navigate]);
+        // Use mySlug here too!
+        getAvailability(mySlug, start.toISOString(), end.toISOString())
+          .then((blocks) => {
+            setData(blocks);
+            setLoading(false);
+          });
+      }, [currentDate]);
     
   const handleNextWeek = () => setCurrentDate(prev => addWeeks(prev, 1));
   const handlePrevWeek = () => setCurrentDate(prev => subWeeks(prev, 1));
@@ -60,16 +55,23 @@ export function HostDashboard() {
   };
 
   const handleAddBlock = async (start: Date, end: Date) => {
-    // 1. Call API
-    const newBlock = await createTimeBlock(HOST_SLUG, start.toISOString(), end.toISOString());
+      // 🟢 NEW: Get the real slug from storage
+      const mySlug = localStorage.getItem('slug'); 
+      
+      if (!mySlug) {
+          alert("Error: No booking link found. Please re-login.");
+          return;
+      }
 
-    if (newBlock) {
-      // 2. Update UI instantly
-      setData(prev => [...prev, newBlock]);
-    } else {
-      alert("Failed to create block");
-    }
-  };
+      // 🟢 NEW: Use mySlug instead of HOST_SLUG
+      const newBlock = await createTimeBlock(mySlug, start.toISOString(), end.toISOString());
+
+      if (newBlock) {
+        setData(prev => [...prev, newBlock]);
+      } else {
+        alert("Failed to create block");
+      }
+    };
 
 return (
     <div className="p-8 bg-gray-100 min-h-screen">
